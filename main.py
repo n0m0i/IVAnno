@@ -1,134 +1,139 @@
-# This is a sample Python script.
+import os.path
+import sys
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from PyQt5.QtCore import Qt, QPointF, QStringListModel
+from PyQt5.QtGui import QPixmap, QTransform, QPainter
+from PyQt5.QtWidgets import *
+from PyQt5 import uic
 
+#UI파일 연결
+#단, UI파일은 Python 코드 파일과 같은 디렉토리에 위치해야한다.
+form_class = uic.loadUiType("IVAnno.ui")[0]
+dataList = []
+#화면을 띄우는데 사용되는 Class 선언
+class WindowClass(QMainWindow, form_class) :
+    def __init__(self) :
+        super().__init__()
+        self.setupUi(self)
+        self.actionOpen_Images.triggered.connect(self.openImage)
+        self.actionSave.triggered.connect(self.handleSaveClicked)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphicsView.viewport().setCursor(Qt.OpenHandCursor)
+        self.graphicsView.setRenderHint(QPainter.Antialiasing)
 
+        self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.listView.clicked.connect(self.handleItemClick)
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    import os.path
+    def populateList(self, text):
+        # 목록 데이터 생성
+        dataList.append(text)
+        # QStringListModel 생성 및 데이터 설정
+        model = QStringListModel()
+        name_list = [os.path.basename(x) for x in dataList]
+        model.setStringList(name_list)
 
-    import cv2
-    import tkinter as tk
-    from tkinter import filedialog
-    from PIL import Image, ImageTk
-    import json
-    import jsonlines
+        # QListView에 model 설정
+        self.listView.setModel(model)
+    def handleItemClick(self, index):
+        # 클릭된 아이템의 인덱스와 텍스트를 가져옵니다.
+        item_index = index.row()
 
-    global OUTPUT_PATH
-    global IMG_PATH
-    global IMG_NAME
-
-    global img
-
-    # Tkinter 창 생성
-    root = tk.Tk()
-    root.title("Image Viewer")
-
-    # 윈도우 크기 설정
-    root.geometry("1000x500")
-
-    # 이미지 리스트와 선택한 이미지 인덱스 초기화
-    image_list = []
-    selected_image_index = 0
-
-    # 이미지 리스트와 선택한 이미지를 표시할 Label 위젯 생성
-    image_listbox = tk.Listbox(root)
-    image_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    selected_image_label = tk.Label(root)
-    selected_image_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-
-    # 이미지 로드 함수 정의
-    def load_images():
-        global image_list
-        global file_paths
-        file_paths = filedialog.askopenfilenames()
-        image_list = [cv2.imread(file_path) for file_path in file_paths]
-        for fp in file_paths:
-            image_listbox.insert(tk.END, os.path.basename(fp))
-
-
-    # 이미지 선택 함수 정의
-    def select_image(event):
-        global selected_image_index
-        selected_image_index = image_listbox.curselection()[0]
-        show_selected_image()
-
-
-    # 이미지 표시 함수 정의
-    def show_selected_image():
-        global selected_image_index
-        img = image_list[selected_image_index]
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        photo = ImageTk.PhotoImage(image=Image.fromarray(img))
-        selected_image_label.configure(image=photo)
-        selected_image_label.image = photo
-
-
-    def save_image():
+        # item_text = self.listView.model().data(index)
+        # 처리할 로직을 작성합니다.
+        self.loadImage(dataList[item_index])
         pass
 
+    def openImage(self):
+        # file_dialog = QFileDialog()
+        # file_dialog.setFileMode(QFileDialog.ExistingFile)
+        # file_dialog.setNameFilter("Images (*.png *.xpm *.jpg *.bmp)")
+        file_paths, _ = QFileDialog.getOpenFileNames(self, 'Select Files', '', 'Images (*.png *.xpm *.jpg)')
 
-    def load_list_from_file(filename):
-        with jsonlines.open(filename) as reader:
-            fboxes = []
-            for i in reader:
-                if i["ID"] == IMG_NAME:
-                    for gtbox in i['gtboxes']:
-                        fbox = gtbox['fbox']
-                        fboxes.append(fbox)
-                else:
-                    print(filename + "is different to " + IMG_NAME)
-            return fboxes
+        # if file_dialog.exec_():
+        #     file_path = file_dialog.selectedFiles()[0]
+        #     self.populateList(file_paths)
+        #     self.loadImage(file_path)
+        for file_path in file_paths:
+            print(file_path)
+            self.populateList(file_path)
+        self.loadImage(file_paths[0])
 
 
-    # 버튼 생성
-    button = tk.Button(root, text="Open Images", command=load_images)
-    button = tk.Button(root, text="Save", command=save_image)
+    def loadImage(self, image_path):
+        # 이미지 파일을 로드합니다.
+        pixmap = QPixmap(image_path)
 
-    button.pack()
+        # QGraphicsScene을 생성하고 이미지를 표시할 QGraphicsPixmapItem을 생성합니다.
+        scene = QGraphicsScene()
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+        scene.addItem(pixmap_item)
 
-    # 이미지 리스트에서 이미지 선택 시 이벤트 바인딩
-    image_listbox.bind("<<ListboxSelect>>", select_image)
+        # graphicsView에 QGraphicsScene을 설정합니다.
+        self.graphicsView.setScene(scene)
 
-    # 변수 초기화
-    drawing = False
-    mag = 1
-    ix, iy = -1, -1
-    odgt = dict()
-    odgt["ID"] = IMG_NAME
-    rectangles = []
-    height, width = 0, 0
+        self.graphicsView.resetTransform()
+        oW = self.getOriginSize().width()
+        oH = self.getOriginSize().height()
 
-    # load json
-    rectangles = load_list_from_file('rectangles.json')
-    print(rectangles)
-    print('len : ', len(rectangles))
+        self.lbl_ImageSize.setText(
+            "Origin Size : " + str(oW) + " x " + str(oH))
+        self.lbl_CurrentSize.setText(
+            "Current Size : " + str(oW) + " x " + str(oH))
+        self.lbl_Scale.setText("Scale : 100%")
 
-    while True:
-        # 이미지 출력
-        height, width = select_image.shape[:2]
-        img = cv2.resize(select_image, (mag * width, mag * height))
+    def getOriginSize(self):
+        # Graphics View에 표시된 이미지의 원래 크기 얻기
+        scene = self.graphicsView.scene()
+        items = scene.items()
+        original_size = -1
+        for item in items:
+            if isinstance(item, QGraphicsPixmapItem):
+                pixmap = item.pixmap()
+                original_size = pixmap.size()
+                break
+        return original_size
+    def wheelEvent(self, event):
+        # Ctrl 키를 누르고 있을 때만 이미지 크기를 조정합니다.
+        if event.modifiers() == Qt.ControlModifier:
+            # 현재 이미지의 크기를 가져옵니다.
+            current_size = self.graphicsView.transform().m11()
+            angle = event.angleDelta().y() / 120  # 휠 동작의 각도를 가져옵니다.
+            scale_factor = 1.1 ** angle  # 이미지 크기를 조정하는 비율 계산
 
-        for rectangle in rectangles:
-            cv2.rectangle(img, (rectangle[0], rectangle[1]), (rectangle[2], rectangle[3]), (0, 255, 0), 1)
-        cv2.imshow("image", img)
+            #원본 이미지의 가로세로 크기
+            oW = self.getOriginSize().width()
+            oH =  self.getOriginSize().height()
+            # 이미지를 비율로 조정합니다.
+            new_size = current_size * scale_factor
+            new_transform = QTransform().scale(new_size, new_size)
+            self.graphicsView.setTransform(new_transform)
+            self.lbl_ImageSize.setText("Origin Size : " + str(oW) + " x " + str(oH))
+            self.lbl_CurrentSize.setText("Current Size : " + str(round(oW * new_size)) + " x " + str(round(oH * new_size)))
+            self.lbl_Scale.setText("Scale : " + str(round(new_size*100)) + "%")
 
-        # 'q' 키를 누르면 종료
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-        # 'r' 키를 누르면 모든 사각형 지우기
-        elif cv2.waitKey(1) & 0xFF == ord("r"):
-            rectangles = []
-            print("remove all")
+            # 이미지의 중심을 기준으로 조정하기 위해 view의 중심을 계산합니다.
+            scene_pos = self.graphicsView.mapToScene(self.graphicsView.viewport().rect().center())
+            view_pos = self.graphicsView.mapFromScene(scene_pos)
+            self.graphicsView.centerOn(view_pos)
 
-    # Tkinter 창 실행
-    root.mainloop()
+        else:
+            # Ctrl 키를 누르지 않은 경우에는 원래의 wheelEvent 동작을 수행합니다.
+            super().wheelEvent(event)
 
+    def handleSaveClicked(self):
+        # 메뉴 항목을 클릭했을 때 실행되는 코드를 작성합니다.
+        print("Save clicked!")
+
+if __name__ == "__main__" :
+    #QApplication : 프로그램을 실행시켜주는 클래스
+    app = QApplication(sys.argv)
+
+    #WindowClass의 인스턴스 생성
+    myWindow = WindowClass()
+
+    #프로그램 화면을 보여주는 코드
+    myWindow.show()
+
+    #프로그램을 이벤트루프로 진입시키는(프로그램을 작동시키는) 코드
+    app.exec_()
