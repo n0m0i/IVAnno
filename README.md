@@ -1,5 +1,4 @@
 # IVAnno : Image / Video Annotation tool
-* * *
 
 json / odgt Ground Truth Data 자동 생성 도구입니다.
 
@@ -17,4 +16,4 @@ json / odgt Ground Truth Data 자동 생성 도구입니다.
 
 * * *
 
-현재 GUI로 변경중이며, DatasetTools 내 코드들은 정상 작동. 
+*현재 GUI로 변경중이며, DatasetTools 내 코드들은 정상적으로 사용할 수 있습니다.*
